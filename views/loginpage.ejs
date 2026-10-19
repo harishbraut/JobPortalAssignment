@@ -1,0 +1,75 @@
+<div class="row justify-content-center my-auto">
+    <div class="col-12 col-sm-10 col-md-7 col-lg-5 col-xl-4">
+
+        <div class="card shadow-lg">
+            <div class="card-body p-4">
+
+                <h1 class="h4 mb-1">Welcome back</h1>
+                <p class="text-body-secondary small mb-4">Log in to apply for jobs or manage your postings.</p>
+
+                <div id="loginError" class="alert alert-danger d-none" role="alert"></div>
+
+                <form id="loginForm">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email address</label>
+                        <input type="email" class="form-control" id="email" name="email"
+                               required autocomplete="email">
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password"
+                               required autocomplete="current-password">
+                    </div>
+
+                    <button type="submit" id="loginButton" class="btn btn-warning w-100">Log in</button>
+                </form>
+
+                <p class="text-center small mt-3 mb-0">
+                    Don't have an account? <a href="/signup" class="link-dark">Sign up</a>
+                </p>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    document.getElementById("loginForm").addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        const errorBox = document.getElementById("loginError");
+        const loginButton = document.getElementById("loginButton");
+        errorBox.classList.add("d-none");
+
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+
+        loginButton.disabled = true;
+        loginButton.textContent = "Logging in...";
+
+        try {
+            const response = await fetch("/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                window.location.href = "/jobs";
+                return;
+            }
+
+            errorBox.textContent = data.msg;
+            errorBox.classList.remove("d-none");
+        } catch (error) {
+            errorBox.textContent = "Could not reach the server. Please try again.";
+            errorBox.classList.remove("d-none");
+        }
+
+        loginButton.disabled = false;
+        loginButton.textContent = "Log in";
+    });
+</script>

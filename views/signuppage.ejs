@@ -1,0 +1,86 @@
+<div class="row justify-content-center my-auto">
+    <div class="col-12 col-sm-10 col-md-7 col-lg-5 col-xl-4">
+
+        <div class="card shadow-lg">
+            <div class="card-body p-4">
+
+                <h1 class="h4 mb-1">Create your account</h1>
+                <p class="text-body-secondary small mb-4">Join Job Portal as an applicant or a recruiter.</p>
+
+                <div id="signupError" class="alert alert-danger d-none" role="alert"></div>
+
+                <form id="signupForm">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="username" name="username"
+                               minlength="4" required autocomplete="username">
+                        <div class="form-text">At least 4 characters.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email address</label>
+                        <input type="email" class="form-control" id="email" name="email"
+                               required autocomplete="email">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password"
+                               minlength="8" required autocomplete="new-password">
+                        <div class="form-text">At least 8 characters.</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="role" class="form-label">I am a</label>
+                        <select class="form-select" id="role" name="role" required>
+                            <option value="" selected disabled>Select your role</option>
+                            <option value="applicant">Applicant (looking for a job)</option>
+                            <option value="recruiter">Recruiter (posting jobs)</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-warning w-100">Sign up</button>
+                </form>
+
+                <p class="text-center small mt-3 mb-0">
+                    Already have an account? <a href="/login" class="link-dark">Log in</a>
+                </p>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    document.getElementById("signupForm").addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        const errorBox = document.getElementById("signupError");
+        errorBox.classList.add("d-none");
+
+        const username = document.getElementById("username").value;
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+        const role = document.getElementById("role").value;
+
+        try {
+            const response = await fetch("/signup", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, email, password, role }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                window.location.href = "/login";
+            } else {
+                errorBox.textContent = data.msg;
+                errorBox.classList.remove("d-none");
+            }
+        } catch (error) {
+            errorBox.textContent = "Could not reach the server. Please try again.";
+            errorBox.classList.remove("d-none");
+        }
+    });
+</script>

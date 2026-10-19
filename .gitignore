@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+
+# Vercel CLI build output / local project link
+.vercel
+
+# Old local resume uploads (personal data). Resumes now live in Cloudinary.
+# Anything in public/ is served publicly on Vercel, so these must never be deployed.
+public/resumes/

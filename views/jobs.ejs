@@ -1,0 +1,267 @@
+<% if (isRecruiter) { %>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h4 mb-0">My posted jobs</h1>
+        <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#addJobModal">
+            <i class="bi bi-plus-lg me-1"></i> Add Job
+        </button>
+    </div>
+<% } %>
+
+<% if (typeof errorMessage !== "undefined") { %>
+    <div class="alert alert-danger" role="alert"><%= errorMessage %></div>
+<% } %>
+
+<% if (query) { %>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <span class="text-body-secondary">
+            <%= jobs.length %> result<%= jobs.length === 1 ? "" : "s" %> for "<%= query %>"
+        </span>
+        <a href="/jobs" class="link-dark">Clear search</a>
+    </div>
+<% } %>
+
+<% if (jobs.length === 0 && typeof errorMessage === "undefined") { %>
+    <div class="text-center text-body-secondary py-5">
+        <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+        <%= query ? "No results found" : (isRecruiter ? "You haven't posted any jobs yet" : "No jobs posted yet") %>
+    </div>
+<% } %>
+
+<div class="d-flex flex-wrap justify-content-center gap-5">
+    <% jobs.forEach(function (job) { %>
+
+        <div class="card shadow-lg job-card">
+
+            <% if (job.companyLogoUrl) { %>
+                <img src="<%= job.companyLogoUrl %>" class="job-card-logo" alt="<%= job.companyName %> logo">
+            <% } else { %>
+                <div class="job-card-logo d-flex align-items-center justify-content-center display-4 fw-bold text-body-secondary">
+                    <%= job.companyName.charAt(0) %>
+                </div>
+            <% } %>
+
+            <div class="card-body d-flex flex-column">
+
+                <h5 class="card-title job-card-title"><%= job.companyName %>-<%= job.jobTitle %></h5>
+
+                <div class="d-flex flex-wrap gap-1 mb-4">
+                    <% job.requiredSkills.forEach(function (skill) { %>
+                        <span class="btn btn-sm btn-outline-success skill-tag"><%= skill %></span>
+                    <% }) %>
+                </div>
+
+                <button type="button" class="btn btn-warning w-100 mt-auto"
+                        data-bs-toggle="modal" data-bs-target="#jobModal"
+                        data-job-id="<%= job._id %>"
+                        data-job-title="<%= job.jobTitle %>"
+                        data-job-company="<%= job.companyName %>"
+                        data-job-description="<%= job.description || 'No description provided.' %>"
+                        data-job-skills="<%= job.requiredSkills.join(', ') %>"
+                        data-job-salary="<%= job.salary ? '₹ ' + job.salary.toLocaleString('en-IN') + ' per year' : 'Not disclosed' %>">
+                    View Details
+                </button>
+            </div>
+        </div>
+    <% }) %>
+</div>
+
+<div class="modal fade" id="jobModal" tabindex="-1" aria-labelledby="jobModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title h5" id="jobModalTitle">Job title</h2>
+                    <div class="text-body-secondary small" id="jobModalCompany">Company</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <h3 class="h6 fw-bold">About the role</h3>
+                <p id="jobModalDescription"></p>
+
+                <h3 class="h6 fw-bold">Required skills</h3>
+                <p id="jobModalSkills"></p>
+
+                <h3 class="h6 fw-bold">Salary</h3>
+                <p id="jobModalSalary" class="mb-0"></p>
+
+                <% if (locals.role === "applicant") { %>
+                    <form id="applyForm" class="border-top pt-3 mt-3">
+                        <div id="applyMessage" class="alert d-none" role="alert"></div>
+                        <label for="resume" class="form-label fw-bold">Your resume (PDF)</label>
+                        <input type="file" class="form-control" id="resume" name="resume" accept="application/pdf" required>
+                        <div class="form-text">PDF only, up to 4 MB.</div>
+                    </form>
+                <% } %>
+            </div>
+
+            <div class="modal-footer">
+                <% if (!locals.userId) { %>
+                    <span class="me-auto small text-body-secondary">
+                        <a href="/login" class="link-dark">Log in</a> as an applicant to apply.
+                    </span>
+                <% } %>
+                <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">Close</button>
+                <% if (locals.role === "applicant") { %>
+                    <button type="submit" form="applyForm" id="applyButton" class="btn btn-warning">Apply</button>
+                <% } %>
+            </div>
+        </div>
+    </div>
+</div>
+
+<% if (locals.role === "applicant") { %>
+<script>
+    const applyForm = document.getElementById("applyForm");
+    const applyMessage = document.getElementById("applyMessage");
+    const applyButton = document.getElementById("applyButton");
+
+    function showApplyMessage(text, success) {
+        applyMessage.textContent = text;
+        applyMessage.classList.remove("d-none", "alert-success", "alert-danger");
+        applyMessage.classList.add(success ? "alert-success" : "alert-danger");
+    }
+
+    // Each time the modal opens: clear the old file and message, enable the button.
+    document.getElementById("jobModal").addEventListener("show.bs.modal", function () {
+        applyForm.reset();
+        applyMessage.classList.add("d-none");
+        applyButton.disabled = false;
+        applyButton.textContent = "Apply";
+    });
+
+    applyForm.addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        // main.js stores the id of the job whose "View Details" was clicked.
+        const jobId = document.getElementById("jobModal").dataset.jobId;
+
+        // FormData picks up the file from <input name="resume">; the API expects that field name.
+        const formData = new FormData(applyForm);
+
+        applyButton.disabled = true;
+        applyButton.textContent = "Applying...";
+
+        try {
+            const response = await fetch(`/jobs/${jobId}/apply`, { method: "POST", body: formData });
+            const data = await response.json();
+
+            if (response.ok) {
+                showApplyMessage("Applied successfully! The recruiter can now see your application.", true);
+                applyButton.textContent = "Applied";
+                return;   // keep the button disabled: no second application
+            }
+
+            showApplyMessage(data.message, false);
+        } catch (error) {
+            showApplyMessage("Could not reach the server. Please try again.", false);
+        }
+
+        applyButton.disabled = false;
+        applyButton.textContent = "Apply";
+    });
+</script>
+<% } %>
+
+<% if (isRecruiter) { %>
+<div class="modal fade" id="addJobModal" tabindex="-1" aria-labelledby="addJobModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <form id="addJobForm">
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="addJobModalTitle">Add a new job</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div id="addJobError" class="alert alert-danger d-none" role="alert"></div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="jobTitle" class="form-label">Job title</label>
+                            <input type="text" class="form-control" id="jobTitle" name="jobTitle" minlength="3" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="companyName" class="form-label">Company name</label>
+                            <input type="text" class="form-control" id="companyName" name="companyName" minlength="2" required>
+                        </div>
+                        <div class="col-12">
+                            <label for="requiredSkills" class="form-label">Required skills</label>
+                            <input type="text" class="form-control" id="requiredSkills" name="requiredSkills"
+                                   placeholder="e.g. java, sql, git" required>
+                            <div class="form-text">Separate skills with commas.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="salary" class="form-label">Salary per year (optional)</label>
+                            <input type="number" class="form-control" id="salary" name="salary" min="0" step="1000">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="companyLogo" class="form-label">Company logo (optional)</label>
+                            <input type="file" class="form-control" id="companyLogo" name="companyLogo"
+                                   accept="image/jpeg,image/png,image/webp">
+                            <div class="form-text">JPEG, PNG or WEBP, up to 2 MB.</div>
+                        </div>
+                        <div class="col-12">
+                            <label for="description" class="form-label">Description (optional)</label>
+                            <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" id="addJobButton" class="btn btn-warning">Add Job</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById("addJobForm").addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        const errorBox = document.getElementById("addJobError");
+        const addJobButton = document.getElementById("addJobButton");
+        errorBox.classList.add("d-none");
+
+        // FormData reads every field with a name="", including the logo file.
+        const formData = new FormData(event.target);
+
+        // The API expects one "requiredSkills" entry per skill, not one comma-separated string.
+        const skills = formData.get("requiredSkills").split(",").map(s => s.trim()).filter(Boolean);
+        formData.delete("requiredSkills");
+        skills.forEach(skill => formData.append("requiredSkills", skill));
+
+        // Don't send optional fields that were left empty.
+        if (!formData.get("salary")) formData.delete("salary");
+        if (!formData.get("description")) formData.delete("description");
+        if (!formData.get("companyLogo").size) formData.delete("companyLogo");
+
+        addJobButton.disabled = true;
+        addJobButton.textContent = "Adding...";
+
+        try {
+            // No Content-Type header: with FormData the browser sets it (multipart/form-data) itself.
+            const response = await fetch("/addJob", { method: "POST", body: formData });
+            const data = await response.json();
+
+            if (response.ok) {
+                window.location.reload();
+                return;
+            }
+
+            errorBox.textContent = data.message;
+            errorBox.classList.remove("d-none");
+        } catch (error) {
+            errorBox.textContent = "Could not reach the server. Please try again.";
+            errorBox.classList.remove("d-none");
+        }
+
+        addJobButton.disabled = false;
+        addJobButton.textContent = "Add Job";
+    });
+</script>
+<% } %>
